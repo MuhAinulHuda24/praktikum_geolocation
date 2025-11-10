@@ -47,5 +47,22 @@ BUILD FAILED in 2m 12s
 Running Gradle task 'assembleDebug'...                            132,6s
 Error: Gradle task assembleDebug failed with exit code 1
 
-di jam 21.41 saya mencoba push tetapi sangat lama ( lemot ) 
+# di jam 21.41 saya mencoba push tetapi sangat lama ( lemot ) 
 <img width="1919" height="1079" alt="image" src="https://github.com/user-attachments/assets/f2b72bad-64dd-4b76-86a5-2c937ef49752" />
+
+dijam 23.00 alhamdulliah setelah meghadpi error yang yang terjadi, akhirnya emulator saya bisa muncul dan hasilnya seperti ini 
+![geocoding](https://github.com/user-attachments/assets/e5aa537a-734d-405c-b042-60d73820dad5)
+
+## saya meminta maaf kepada bapak dosen , karena mengeclound setelah tenggat jam yang telah dilakukan, tetapi disini saya hanya ingin berusaha agar bisa dibuka di emulator saya 
+adapun ketentuan ketentuan yang ada di tugas 1 inysallah telah saya selesaikan yaitu dengan 
+1. sudah menambahkan paket geocoding di pubspec.yaml.
+2. Import paketnya: import ’package:geocoding/geocoding.dart’;
+3. Buat variabel String? currentAddress; di MyHomePageState.
+4. Buat fungsi baru getAddressFromLatLng(Position position).
+5.  Panggil fungsi getAddressFromLatLng( currentPosition!) di dalam getLocation
+dan startTracking (di dalam .listen()) setelah setState untuk currentPosition.
+6. Tampilkan currentAddress di UI Anda, di bawah Lat/Lng.
+
+
+
+
