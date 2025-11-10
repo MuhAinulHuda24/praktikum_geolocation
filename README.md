@@ -46,3 +46,6 @@ Error resolving plugin [id: 'dev.flutter.flutter-plugin-loader', version: '1.0.0
 BUILD FAILED in 2m 12s
 Running Gradle task 'assembleDebug'...                            132,6s
 Error: Gradle task assembleDebug failed with exit code 1
+
+di jam 21.41 saya mencoba push tetapi sangat lama ( lemot ) 
+<img width="1919" height="1079" alt="image" src="https://github.com/user-attachments/assets/f2b72bad-64dd-4b76-86a5-2c937ef49752" />
