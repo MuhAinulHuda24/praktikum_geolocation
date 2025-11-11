@@ -1,268 +1,185 @@
-import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:geolocator/geolocator.dart';
-import 'package:geocoding/geocoding.dart'; // untuk ubah koordinat jadi alamat
+import 'package:geocoding/geocoding.dart';
 
-void main() {
-  runApp(MyApp());
-}
+void main() => runApp(const MyApp());
 
 class MyApp extends StatelessWidget {
+  const MyApp({super.key});
+
   @override
   Widget build(BuildContext context) {
-    return MaterialApp(
-      title: 'Praktikum Geolocator (Dasar)',
-      theme: ThemeData(
-        primarySwatch: Colors.blue,
-        visualDensity: VisualDensity.adaptivePlatformDensity,
-      ),
+    return const MaterialApp(
       debugShowCheckedModeBanner: false,
-      home: MyHomePage(),
+      home: GeolocatorPage(),
     );
   }
 }
 
-class MyHomePage extends StatefulWidget {
+class GeolocatorPage extends StatefulWidget {
+  const GeolocatorPage({super.key});
+
   @override
-  _MyHomePageState createState() => _MyHomePageState();
+  State<GeolocatorPage> createState() => _GeolocatorPageState();
 }
 
-class _MyHomePageState extends State<MyHomePage> {
-  Position? _currentPosition;
-  String? _errorMessage;
-  StreamSubscription<Position>? _positionStream;
+class _GeolocatorPageState extends State<GeolocatorPage> {
+  Position? position;
+  String? address;
+  String? distance;
+  Stream<Position>? stream;
 
-  String? _currentAddress; // alamat dari koordinat
-  String? _distanceToPNB;  // jarak ke titik tetap
+  static const double pnbLat = -6.2088;
+  static const double pnbLng = 106.8456;
 
-  // Titik tetap (contohnya lokasi kampus PNB)
-  final double _pnbLatitude = -8.7996;
-  final double _pnbLongitude = 115.1767;
-
-  @override
-  void dispose() {
-    _positionStream?.cancel();
-    super.dispose();
+  Future<Position> _getLocation() async {
+    bool service = await Geolocator.isLocationServiceEnabled();
+    if (!service) throw 'GPS belum aktif';
+    LocationPermission perm = await Geolocator.checkPermission();
+    if (perm == LocationPermission.denied) {
+      perm = await Geolocator.requestPermission();
+      if (perm == LocationPermission.denied) throw 'Izin lokasi ditolak';
+    }
+    if (perm == LocationPermission.deniedForever) {
+      throw 'Izin lokasi ditolak permanen';
+    }
+    return await Geolocator.getCurrentPosition();
   }
 
-  // Fungsi izin + ambil lokasi awal
-  Future<Position> _getPermissionAndLocation() async {
-    bool serviceEnabled;
-    LocationPermission permission;
-
-    serviceEnabled = await Geolocator.isLocationServiceEnabled();
-    if (!serviceEnabled) {
-      return Future.error('Layanan lokasi tidak aktif. Harap aktifkan GPS.');
-    }
-
-    permission = await Geolocator.checkPermission();
-    if (permission == LocationPermission.denied) {
-      permission = await Geolocator.requestPermission();
-      if (permission == LocationPermission.denied) {
-        return Future.error('Izin lokasi ditolak.');
-      }
-    }
-
-    if (permission == LocationPermission.deniedForever) {
-      return Future.error(
-        'Izin lokasi ditolak permanen. Harap ubah di pengaturan aplikasi.',
-      );
-    }
-
-    return await Geolocator.getCurrentPosition(
-      desiredAccuracy: LocationAccuracy.high,
+  Future<void> _getAddress(Position pos) async {
+    List<Placemark> p = await placemarkFromCoordinates(
+      pos.latitude,
+      pos.longitude,
     );
-  }
-
-  //  Ubah koordinat ke alamat (pakai geocoding)
-  Future<void> _getAddressFromLatLng(Position position) async {
-    try {
-      List<Placemark> placemarks = await placemarkFromCoordinates(
-        position.latitude,
-        position.longitude,
-      );
-
-      Placemark place = placemarks[0];
-      setState(() {
-        _currentAddress =
-            "${place.street}, ${place.subLocality}, ${place.locality}, ${place.administrativeArea}, ${place.country}";
-      });
-    } catch (e) {
-      setState(() {
-        _currentAddress = "Gagal mendapatkan alamat: $e";
-      });
-    }
-  }
-
-  //  Ambil lokasi sekali (tombol "Dapatkan Lokasi Sekarang")
-  void _handleGetLocation() async {
-    try {
-      Position position = await _getPermissionAndLocation();
-      setState(() {
-        _currentPosition = position;
-        _errorMessage = null;
-      });
-
-      // tampilkan alamat
-      await _getAddressFromLatLng(position);
-
-      // hitung jarak ke PNB
-      double distanceInMeters = Geolocator.distanceBetween(
-        _pnbLatitude,
-        _pnbLongitude,
-        position.latitude,
-        position.longitude,
-      );
-      setState(() {
-        _distanceToPNB =
-            "Jarak dari PNB: ${distanceInMeters.toStringAsFixed(2)} m";
-      });
-    } catch (e) {
-      setState(() {
-        _errorMessage = e.toString();
-      });
-    }
-  }
-
-  //  Lacak posisi terus-menerus
-  void _handleStartTracking() {
-    _positionStream?.cancel();
-
-    final LocationSettings locationSettings = LocationSettings(
-      accuracy: LocationAccuracy.high,
-      distanceFilter: 10, //  update posisi setiap berpindah ≥10 meter
-    );
-
-    try {
-      _positionStream = Geolocator.getPositionStream(
-        locationSettings: locationSettings,
-      ).listen((Position position) {
-        double distanceInMeters = Geolocator.distanceBetween(
-          _pnbLatitude,
-          _pnbLongitude,
-          position.latitude,
-          position.longitude,
-        );
-
-        setState(() {
-          _currentPosition = position;
-          _distanceToPNB =
-              "Jarak dari PNB: ${distanceInMeters.toStringAsFixed(2)} m";
-          _errorMessage = null;
-        });
-
-        _getAddressFromLatLng(position); // update alamat tiap bergerak
-      });
-    } catch (e) {
-      setState(() {
-        _errorMessage = e.toString();
-      });
-    }
-  }
-
-  void _handleStopTracking() {
-    _positionStream?.cancel();
+    var place = p.first;
     setState(() {
-      _errorMessage = "Pelacakan dihentikan.";
+      address = "${place.street}, ${place.locality}, ${place.country}";
     });
   }
 
-  //  UI (tampilan utama)
+  Future<void> getNow() async {
+    try {
+      var pos = await _getLocation();
+      double jarak = Geolocator.distanceBetween(
+        pnbLat,
+        pnbLng,
+        pos.latitude,
+        pos.longitude,
+      );
+      setState(() {
+        position = pos;
+        distance = "${(jarak / 1000).toStringAsFixed(2)} km";
+      });
+      _getAddress(pos);
+    } catch (e) {
+      setState(() => address = "$e");
+    }
+  }
+
+  void startTrack() {
+    stream = Geolocator.getPositionStream(
+      locationSettings: const LocationSettings(
+        accuracy: LocationAccuracy.high,
+        distanceFilter: 5,
+      ),
+    );
+    stream!.listen((pos) {
+      double jarak = Geolocator.distanceBetween(
+        pnbLat,
+        pnbLng,
+        pos.latitude,
+        pos.longitude,
+      );
+      setState(() {
+        position = pos;
+        distance = "${(jarak / 1000).toStringAsFixed(2)} km";
+      });
+      _getAddress(pos);
+    });
+  }
+
+  void stopTrack() {
+    stream = null;
+    setState(() => address = "Pelacakan dihentikan.");
+  }
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: AppBar(title: Text("Praktikum Geolocator (Dasar)")),
+      appBar: AppBar(
+        title: const Text("Praktikum Geolocator (Dasar)"),
+        centerTitle: true,
+      ),
       body: Center(
         child: Padding(
-          padding: const EdgeInsets.all(24.0),
-          child: SingleChildScrollView(
-            child: Column(
-              mainAxisAlignment: MainAxisAlignment.center,
-              children: [
-                Icon(Icons.location_on, size: 50, color: Colors.blue),
-                SizedBox(height: 16),
-
-                ConstrainedBox(
-                  constraints: BoxConstraints(minHeight: 150),
-                  child: Column(
-                    mainAxisAlignment: MainAxisAlignment.center,
-                    children: [
-                      if (_errorMessage != null)
-                        Text(
-                          _errorMessage!,
-                          style: TextStyle(color: Colors.red, fontSize: 16),
-                          textAlign: TextAlign.center,
-                        ),
-                      SizedBox(height: 16),
-
-                      if (_currentPosition != null) ...[
-                        Text(
-                          "Lat: ${_currentPosition!.latitude}\nLng: ${_currentPosition!.longitude}",
-                          textAlign: TextAlign.center,
-                          style: TextStyle(
-                            fontSize: 18,
-                            fontWeight: FontWeight.bold,
-                          ),
-                        ),
-                        if (_currentAddress != null)
-                          Padding(
-                            padding: const EdgeInsets.only(top: 8.0),
-                            child: Text(
-                              "Alamat: $_currentAddress",
-                              textAlign: TextAlign.center,
-                              style: TextStyle(
-                                  fontSize: 16, color: Colors.grey[700]),
-                            ),
-                          ),
-                        if (_distanceToPNB != null)
-                          Padding(
-                            padding: const EdgeInsets.only(top: 8.0),
-                            child: Text(
-                              _distanceToPNB!,
-                              textAlign: TextAlign.center,
-                              style: TextStyle(
-                                  fontSize: 16, color: Colors.deepPurple),
-                            ),
-                          ),
-                      ],
-                    ],
+          padding: const EdgeInsets.all(20),
+          child: Column(
+            mainAxisAlignment: MainAxisAlignment.center,
+            children: [
+              const Icon(Icons.location_on, size: 70, color: Colors.blue),
+              const SizedBox(height: 10),
+              if (position != null)
+                Text(
+                  "Lat: ${position!.latitude}\nLng: ${position!.longitude}",
+                  textAlign: TextAlign.center,
+                ),
+              if (address != null)
+                Padding(
+                  padding: const EdgeInsets.only(top: 8),
+                  child: Text(address!, textAlign: TextAlign.center),
+                ),
+              if (distance != null)
+                Padding(
+                  padding: const EdgeInsets.only(top: 12),
+                  child: Text(
+                    "Jarak ke PNB: $distance",
+                    style: const TextStyle(
+                      fontWeight: FontWeight.bold,
+                      color: Colors.black,
+                    ),
                   ),
                 ),
-
-                SizedBox(height: 32),
-
-                ElevatedButton.icon(
-                  icon: Icon(Icons.location_searching),
-                  label: Text('Dapatkan Lokasi Sekarang'),
-                  onPressed: _handleGetLocation,
-                  style: ElevatedButton.styleFrom(
-                    minimumSize: Size(double.infinity, 40),
+              const SizedBox(height: 25),
+              ElevatedButton.icon(
+                onPressed: getNow,
+                icon: const Icon(Icons.my_location, color: Colors.blue),
+                label: const Text(
+                  "Dapatkan Lokasi Sekarang",
+                  style: TextStyle(color: Colors.blue),
+                ),
+                style: ElevatedButton.styleFrom(
+                  backgroundColor: Colors.white,
+                  side: const BorderSide(color: Colors.blue),
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: 24,
+                    vertical: 14,
                   ),
                 ),
-                SizedBox(height: 16),
-                Row(
-                  mainAxisAlignment: MainAxisAlignment.spaceEvenly,
-                  children: [
-                    ElevatedButton.icon(
-                      icon: Icon(Icons.play_arrow),
-                      label: Text('Mulai Lacak'),
-                      onPressed: _handleStartTracking,
-                      style: ElevatedButton.styleFrom(
-                        backgroundColor: Colors.green,
-                      ),
+              ),
+              const SizedBox(height: 20),
+              Row(
+                mainAxisAlignment: MainAxisAlignment.center,
+                children: [
+                  ElevatedButton.icon(
+                    onPressed: startTrack,
+                    icon: const Icon(Icons.play_arrow),
+                    label: const Text("Mulai Lacak"),
+                    style: ElevatedButton.styleFrom(
+                      backgroundColor: Colors.green,
                     ),
-                    ElevatedButton.icon(
-                      icon: Icon(Icons.stop),
-                      label: Text('Henti Lacak'),
-                      onPressed: _handleStopTracking,
-                      style: ElevatedButton.styleFrom(
-                        backgroundColor: Colors.red,
-                      ),
+                  ),
+                  const SizedBox(width: 15),
+                  ElevatedButton.icon(
+                    onPressed: stopTrack,
+                    icon: const Icon(Icons.stop),
+                    label: const Text("Henti Lacak"),
+                    style: ElevatedButton.styleFrom(
+                      backgroundColor: Colors.red,
                     ),
-                  ],
-                ),
-              ],
-            ),
+                  ),
+                ],
+              ),
+            ],
           ),
         ),
       ),
