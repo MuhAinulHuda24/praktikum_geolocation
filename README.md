@@ -64,14 +64,82 @@ dan startTracking (di dalam .listen()) setelah setState untuk currentPosition.
 6. Tampilkan currentAddress di UI Anda, di bawah Lat/Lng.
 
 ## praktikum Geolocation 2
-**Tugas 2**: Jarak Real-time ke Titik Tetap
-Manfaatkan fungsi Geolocator.distanceBetween dari Langkah 4.
-1. Buat variabel String? distanceToPNB; di MyHomePageState.
-2. Di dalam startTracking (di dalam .listen()), panggil fungsi untuk menghitung
-jarak:
-3. Simpan hasilnya di distanceToPNB menggunakan setState.
-4. Tampilkan distanceToPNB di UI agar jaraknya ter-update secara real-time saat
-Anda bergerak
+# Judul: Menampilkan Jarak Real-time ke Titik Tetap Menggunakan Geolocator.distanceBetween
+# Tujuan
 
+Membuat aplikasi Flutter yang menampilkan jarak real-time antara lokasi pengguna dengan titik tetap (contoh: Politeknik Negeri Banyuwangi) menggunakan Geolocator.
+# Dasar Teori
 
+Geolocator: mendapatkan posisi GPS dan perubahannya secara real-time.
+Geocoding: mengubah koordinat menjadi alamat.
+Geolocator.distanceBetween(): menghitung jarak antara dua koordinat (dalam meter).
+## Langkah Pengerjaan
+# Tambahkan dependensi berikut di pubspec.yaml:
+dependencies:
+  geolocator: ^10.1.0
+  geocoding: ^2.1.0
+
+# Buat variabel untuk menyimpan data lokasi:
+
+Position? position;
+String? address;
+String? distanceToPNB;
+Stream<Position>? stream;
+
+# entukan titik tetap (misalnya lokasi kampus PNB):
+static const double pnbLat = -6.2088;
+static const double pnbLng = 106.8456;
+
+# Ambil posisi pengguna:
+Future<Position> _getLocation() async {
+  bool service = await Geolocator.isLocationServiceEnabled();
+  if (!service) throw 'GPS belum aktif';
+  LocationPermission perm = await Geolocator.checkPermission();
+  if (perm == LocationPermission.denied) {
+    perm = await Geolocator.requestPermission();
+    if (perm == LocationPermission.denied) throw 'Izin lokasi ditolak';
+  }
+  return await Geolocator.getCurrentPosition();
+}
+
+# Hitung jarak ke titik tetap secara real-time di dalam startTrack():
+void startTrack() {
+  stream = Geolocator.getPositionStream(
+    locationSettings: const LocationSettings(
+      accuracy: LocationAccuracy.high,
+      distanceFilter: 5,
+    ),
+  );
+
+  stream!.listen((pos) {
+    double jarak = Geolocator.distanceBetween(
+      pnbLat, pnbLng,
+      pos.latitude, pos.longitude,
+    );
+
+    setState(() {
+      position = pos;
+      distanceToPNB = "${(jarak / 1000).toStringAsFixed(2)} km";
+    });
+  });
+}
+
+# Tampilkan hasil di UI:
+if (distanceToPNB != null)
+  Text(
+    "Jarak ke PNB: $distanceToPNB",
+    style: const TextStyle(fontWeight: FontWeight.bold),
+  );
+## Hasil Pengamatan
+# scrinshot
+![saya](https://github.com/user-attachments/assets/02ddffaa-aee0-4324-8bac-0196f46f39cc)
+
+Saat tombol “Mulai Lacak” ditekan, jarak akan otomatis berubah ketika posisi perangkat berpindah.
+Jarak ditampilkan dalam satuan kilometer dengan pembaruan setiap 5 meter pergerakan.
+# Analisis
+Fungsi Geolocator.distanceBetween() memanfaatkan rumus Haversine untuk menghitung jarak bumi melengkung antar koordinat
+Penggunaan getPositionStream() memungkinkan data posisi dan jarak diperbarui secara real-time tanpa perlu menekan tombol ulang.
+# Kesimpulan
+Aplikasi berhasil menampilkan jarak real-time ke titik tetap menggunakan Geolocator.distanceBetween().
+Fitur ini dapat dikembangkan lebih lanjut untuk sistem pelacakan, monitoring, atau pemantauan jarak pengguna dari lokasi tertentu.
 
