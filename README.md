@@ -1,4 +1,4 @@
-# praktikum_geolocation
+## praktikum_geolocation 1
 
 saya telah mencobanya berkali kali hingga pada saat jam telah mepet saya masih tidak bisa membukanya lewat emulator saya, saya telah mencari soslusi ke AI dan mash tetap saja tidak bisa dengan keterangan error seperti ini :
  flutter run
@@ -63,6 +63,15 @@ adapun ketentuan ketentuan yang ada di tugas 1 inysallah telah saya selesaikan y
 dan startTracking (di dalam .listen()) setelah setState untuk currentPosition.
 6. Tampilkan currentAddress di UI Anda, di bawah Lat/Lng.
 
+## praktikum Geolocation 2
+**Tugas 2**: Jarak Real-time ke Titik Tetap
+Manfaatkan fungsi Geolocator.distanceBetween dari Langkah 4.
+1. Buat variabel String? distanceToPNB; di MyHomePageState.
+2. Di dalam startTracking (di dalam .listen()), panggil fungsi untuk menghitung
+jarak:
+3. Simpan hasilnya di distanceToPNB menggunakan setState.
+4. Tampilkan distanceToPNB di UI agar jaraknya ter-update secara real-time saat
+Anda bergerak
 
 
 
